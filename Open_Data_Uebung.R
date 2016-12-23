@@ -55,7 +55,7 @@ min.gemeinde <- gemeinde.daten %>%
 
 library(data.table)
 class(gemeinde.daten)
-gemiende.table <- as.data.table(gemeinde.daten)
+gemeinde.table <- as.data.table(gemeinde.daten)
 max.gem.dt <- gemeinde.daten[gemeinde.daten$bev_total == max(gemeinde.daten$bev_total),]
 min.gem.dt <- gemeinde.daten[gemeinde.daten$bev_total == min(gemeinde.daten$bev_total),]
 
@@ -67,15 +67,43 @@ min.gem.dt <- gemeinde.daten[gemeinde.daten$bev_total == min(gemeinde.daten$bev_
 # Führen Sie visuelle Auswertungen durch, mit welchen Sie folgende Fragen beantworten lassen:
 # 2.1 In welchem Kanton gibt es am meisten Gemeinden? In welchem am wenigsten?
 library(ggplot2)
-gemeinde.test <- gemiende.table[, sum(bev_total),by=.(kantone)][order(V1,decreasing=TRUE)]
+library(data.table)
+gemeinde.kantone <- gemeinde.table[, sum(bev_total),by=.(kantone)][order(V1,decreasing=TRUE)]
 
-ggplot(gemeinde.test, aes(x=reorder(gemeinde.test$kanton, gemeinde.test$V1), y=gemeinde.test$V1))+
+ggplot(gemeinde.kantone, aes(x=reorder(gemeinde.kantone$kanton, gemeinde.kantone$V1), y=gemeinde.kantone$V1))+
   geom_bar(stat="identity")+
   coord_flip()+
   labs(x ="Kantone", y = "Einwohner")
 
 # 2.2 Betrachten Sie die Einwohnerzahlen der Gemeinden gruppiert nach Sprachregionen. Wie
 # heissen die jeweils grössten Gemeinden?
+
+# erstellen einer kolone Max gefilter nach 'Sprachregion'
+gemeinde.table[, max := max(bev_total), by = .(sprachregionen)]
+gemeinde.table[bev_total == max, .(gmdename, kantone, sprachregionen, bev_total)]
+
+max <- gemeinde.table[bev_total == max, .(gmdename, kantone, sprachregionen, bev_total)]
+max
+
+fancy_scientific <- function(l) {
+  # turn in to character string in scientific notation
+  l <- format(l, scientific = TRUE)
+  # quote the part before the exponent to keep all the digits
+  l <- gsub("^(.*)e", "'\\1'e", l)
+  # turn the 'e+' into plotmath format
+  l <- gsub("e", "%*%10^", l)
+  # return this as an expression
+  parse(text=l)
+}
+
+ggplot(max, aes(y=max$bev_total, x=max$gmdename))+
+  geom_bar(stat="identity")+
+  ylab(label = max$bev_total)+
+  theme(text = element_text(size=8))+
+  # scale_y_continuous(labels=fancy_scientific) +
+  scale_y_continuous(labels = comma)+
+  coord_flip()+
+  labs(x ="Geminde", y = "Einwohner")
 
 # 2.3. Betrachten Sie die Veränderung der Einwohnerzahl von 2010 bis 2014 nach Sprachregionen. In
 # welcher Sprachregionen sind die Gemeinden am stärksten gewachsen? In welcher am
